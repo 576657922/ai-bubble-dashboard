@@ -44,6 +44,16 @@ open index.html           # 直接用浏览器打开（无需起服务器）
 | 手动指标（资本开支、循环融资、集中度等） | 编辑 `data/manual.json` 后重跑脚本 | 每季度财报季后 |
 | 关键事件时间线 | `data/manual.json` 的 `events` | 随手记 |
 
+## 线上版本
+
+- 仓库：https://github.com/576657922/ai-bubble-dashboard（私有）
+- 数据自动更新：GitHub Actions 每天北京时间 6:30 跑一次 `fetch_data.py`
+  并提交 `data/data.js`（见 `.github/workflows/refresh-data.yml`），
+  也可在仓库 Actions 页手动触发
+- 托管：腾讯云 EdgeOne Pages（免费、免备案、国内可访问），连接本仓库后
+  每次 push 自动重新部署。手动指标更新流程不变：改 `manual.json` → 本地跑
+  一次脚本确认 → `git push`，线上就同步了
+
 ## 踩坑记录
 
 - **FRED 防火墙掐伪装 UA**：`fredgraph.csv` 免 key，但请求头里如果带
