@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 泡沫仪表盘 · 美股本轮周期</title>
+<style>
+  :root {
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --baseline:    #383835;
+    --border:      rgba(255,255,255,0.10);
+    --s1:          #3987e5;  /* 系列1 蓝 */
+    --s2:          #199e70;  /* 系列2 青 */
+    --s3:          #c98500;  /* 系列3 黄 */
+    --dim:         #5a5954;  /* 弱化线（sparkline 历史段） */
+    --good:        #0ca30c;
+    --warning:     #fab219;
+    --serious:     #ec835a;
+    --critical:    #d03b3b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--page);
+    color: var(--ink-2);
+    font-family: system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  /* ---------- 页头 ---------- */
+  header h1 { color: var(--ink); font-size: 22px; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  header code {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; font-size: 12px; color: var(--ink-2);
+  }
+
+  /* ---------- 综合评估区 ---------- */
+  .hero {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-top: 20px;
+  }
+  .hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 28px; }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; } }
+  .stage-label { color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+  .stage-name { color: var(--ink); font-size: 48px; font-weight: 700; line-height: 1.15; margin: 4px 0 2px; }
+  .stage-sub { color: var(--ink-2); font-size: 13px; }
+  .stepper { display: flex; gap: 4px; margin-top: 18px; }
+  .step { flex: 1; }
+  .step .bar { height: 6px; border-radius: 3px; background: var(--grid); }
+  .step.past .bar { background: #1c5cab; }
+  .step.now  .bar { background: var(--s1); }
+  .step .t { font-size: 11px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
+  .step.now .t { color: var(--ink); font-weight: 600; }
+  .meters { display: flex; flex-direction: column; gap: 18px; justify-content: center; }
+  .meter .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .meter .name { color: var(--ink-2); font-size: 13px; }
+  .meter .val { color: var(--ink); font-size: 26px; font-weight: 650; }
+  .meter .val small { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .meter .track { height: 8px; border-radius: 4px; margin-top: 6px; position: relative; overflow: hidden; }
+  .meter .fill { height: 100%; border-radius: 4px; }
+  .meter .note { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .verdict { border-top: 1px solid var(--border); margin-top: 20px; padding-top: 16px; font-size: 13.5px; }
+  .verdict p + p { margin-top: 8px; }
+  .verdict strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- 状态徽章（图标+文字，不依赖颜色单独传义） ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--ink-2); }
+  .chip .ic { font-size: 11px; line-height: 1; }
+  .ic.good { color: var(--good); }  .ic.warning { color: var(--warning); }
+  .ic.serious { color: var(--serious); }  .ic.critical { color: var(--critical); }
+  .badge {
+    font-size: 11px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 4px; padding: 0 6px;
+  }
+
+  /* ---------- 过滤行 ---------- */
+  .filters {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    margin: 28px 0 4px;
+  }
+  .filters .lbl { color: var(--muted); font-size: 12px; }
+  .seg { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    background: none; border: none; color: var(--ink-2); font-size: 13px;
+    padding: 6px 14px; cursor: pointer; font-family: inherit;
+  }
+  .seg button:hover { background: rgba(255,255,255,0.05); }
+  .seg button.on { background: rgba(57,135,229,0.16); color: var(--ink); font-weight: 600; }
+  .seg button.on::before { content: "✓ "; font-weight: 700; }
+  .filters .right { margin-left: auto; }
+  .ghost-btn {
+    background: none; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--ink-2); font-size: 13px; padding: 6px 14px; cursor: pointer; font-family: inherit;
+  }
+  .ghost-btn:hover { background: rgba(255,255,255,0.05); }
+
+  /* ---------- 区块与卡片 ---------- */
+  section.cat { margin-top: 32px; }
+  section.cat > h2 { color: var(--ink); font-size: 16px; font-weight: 650; }
+  section.cat > .cat-sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(292px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .card .name { color: var(--ink); font-size: 13.5px; font-weight: 600; }
+  .card .value-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .card .value { color: var(--ink); font-size: 28px; font-weight: 650; }
+  .card .unit { color: var(--muted); font-size: 13px; }
+  .card .nodata { color: var(--muted); font-size: 13px; font-style: normal; }
+  .scorebar { display: flex; align-items: center; gap: 8px; }
+  .scorebar .track { flex: 1; height: 6px; border-radius: 3px; overflow: hidden; position: relative; }
+  .scorebar .fill { height: 100%; border-radius: 3px; }
+  .scorebar .n { font-size: 12px; color: var(--muted); min-width: 52px; text-align: right; }
+  .spark { margin: 2px 0; }
+  .card .thresholds { color: var(--muted); font-size: 11.5px; }
+  .card .desc { color: var(--ink-2); font-size: 12.5px; }
+  .card .meta { color: var(--muted); font-size: 11.5px; margin-top: auto; padding-top: 4px; }
+  .card .meta a { color: var(--muted); }
+  .card .meta a:hover { color: var(--ink-2); }
+
+  /* ---------- 大图 ---------- */
+  .bigchart {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px; margin-top: 14px;
+  }
+  .bigchart .head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; }
+  .bigchart h3 { color: var(--ink); font-size: 15px; font-weight: 650; }
+  .bigchart .head .cur { color: var(--muted); font-size: 12.5px; }
+  .bigchart .head .cur b { color: var(--ink); font-weight: 650; font-size: 15px; }
+  .bigchart svg:focus { outline: 1px solid var(--s1); outline-offset: 3px; border-radius: 4px; }
+  details.dtable { margin-top: 10px; }
+  details.dtable summary { color: var(--muted); font-size: 12px; cursor: pointer; }
+
+  /* ---------- 提示框 ---------- */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 50; display: none;
+    background: #232322; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  }
+  #tip .d { color: var(--muted); margin-bottom: 2px; }
+  #tip .row { display: flex; align-items: center; gap: 7px; }
+  #tip .key { width: 12px; height: 0; border-top: 2px solid var(--s1); }
+  #tip .v { color: var(--ink); font-weight: 650; font-size: 14px; }
+  #tip .l { color: var(--ink-2); }
+
+  /* ---------- 表格视图 ---------- */
+  .tablewrap { display: none; margin-top: 14px; overflow-x: auto; }
+  .tablewrap.show { display: block; }
+  table.data {
+    border-collapse: collapse; width: 100%; font-size: 13px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  table.data th, table.data td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--grid); }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  table.data th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  table.data td { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  table.data td.nm { color: var(--ink); }
+
+  /* ---------- 事件与方法 ---------- */
+  .events li { margin-left: 18px; margin-bottom: 6px; font-size: 13px; }
+  .events .d { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 8px; }
+  .method { color: var(--ink-2); font-size: 13px; }
+  .method p + p { margin-top: 8px; }
+  .method .disc { color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 12px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 40px; }
+
+  .banner {
+    background: var(--surface); border: 1px solid var(--warning); border-radius: 10px;
+    padding: 14px 18px; margin-top: 20px; font-size: 13px; color: var(--ink-2);
+  }
+
+  /* ---------- 开机动画（手写 ka1o，移植自 proposal 项目） ---------- */
+  body.is-loading { overflow: hidden; }
+  .preloader {
+    position: fixed; inset: 0; z-index: 10002;
+    background: var(--page);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.9s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  .preloader.exit { transform: translateY(-100%); }
+  .preloader-content { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+  .logo-svg { width: clamp(140px, 28vw, 240px); height: auto; color: var(--ink); }
+  .logo-path {
+    stroke-dasharray: var(--path-len);
+    stroke-dashoffset: var(--path-len);
+  }
+  .logo-path.draw {
+    animation: drawStroke var(--draw-dur, 0.6s) cubic-bezier(0.33, 1, 0.68, 1) forwards;
+    animation-delay: var(--draw-delay, 0s);
+  }
+  @keyframes drawStroke { to { stroke-dashoffset: 0; } }
+  .preloader-counter {
+    font-weight: 300; font-size: 13px; color: var(--muted);
+    font-variant-numeric: tabular-nums; letter-spacing: 0.3em; line-height: 1;
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .preloader-counter.visible { opacity: 1; }
+  .preloader-line {
+    position: absolute; bottom: 0; left: 0; height: 1px;
+    background: var(--s1); width: 0%; transition: width 0.15s linear;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .logo-path { stroke-dashoffset: 0; }
+    .preloader { transition-duration: 0.01s; }
+  }
+</style>
+</head>
+<body class="is-loading">
+<!-- 开机动画：手写 ka1o（移植自 proposal 项目的 preloader） -->
+<div class="preloader" id="preloader">
+  <div class="preloader-content">
+    <svg class="logo-svg" viewBox="0 0 120 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="ka1o">
+      <!-- k -->
+      <path class="logo-path" d="M 4,2 V 46" />
+      <path class="logo-path" d="M 4,24 L 30,4" />
+      <path class="logo-path" d="M 4,24 L 30,46" />
+      <!-- a -->
+      <path class="logo-path" d="M 62,46 V 18 C 62,6 38,6 38,22 C 38,38 50,46 62,36" />
+      <!-- 1 -->
+      <path class="logo-path" d="M 74,8 V 46" />
+      <!-- o -->
+      <path class="logo-path" d="M 100,10 C 89,10 84,19 84,28 C 84,37 89,46 100,46 C 111,46 116,37 116,28 C 116,19 111,10 100,10 Z" />
+    </svg>
+    <span class="preloader-counter" id="preloaderCounter">000</span>
+  </div>
+  <div class="preloader-line" id="preloaderLine"></div>
+</div>
+<div class="wrap">
+  <header>
+    <h1>AI 泡沫仪表盘</h1>
+    <div class="sub">美股本轮周期 · 综合评估当前处于泡沫的哪个阶段 ·
+      数据更新：<span id="gen">—</span> ·
+      刷新数据：<code>python3 fetch_data.py</code></div>
+  </header>
+
+  <div id="banner" class="banner" style="display:none"></div>
+
+  <!-- 综合评估 -->
+  <div class="hero" id="hero" style="display:none">
+    <div class="hero-grid">
+      <div>
+        <div class="stage-label">综合判定 · 金德尔伯格－明斯基五阶段</div>
+        <div class="stage-name" id="stageName">—</div>
+        <div class="stage-sub" id="stageSub"></div>
+        <div class="stepper" id="stepper"></div>
+      </div>
+      <div class="meters">
+        <div class="meter" id="meterExtent"></div>
+        <div class="meter" id="meterTrigger"></div>
+      </div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+  </div>
+
+  <!-- 过滤行：作用于下方所有时间序列 -->
+  <div class="filters">
+    <span class="lbl">时间范围</span>
+    <div class="seg" id="rangeSeg" role="group" aria-label="时间范围"></div>
+    <div class="right">
+      <button class="ghost-btn" id="tableToggle" aria-expanded="false">表格视图</button>
+    </div>
+  </div>
+
+  <!-- 全指标表格（图表的无障碍孪生视图） -->
+  <div class="tablewrap" id="tablewrap"></div>
+
+  <!-- 大图：核心信号 -->
+  <div class="bigchart">
+    <div class="head">
+      <h3>高收益债信用利差（HY OAS）— 本轮最不可忽视的引爆信号</h3>
+      <span class="cur" id="bigCur"></span>
+    </div>
+    <div id="bigChart"></div>
+    <details class="dtable"><summary>查看数据表格</summary><div id="bigTable"></div></details>
+  </div>
+
+  <div id="sections"></div>
+
+  <section class="cat">
+    <h2>关键事件时间线</h2>
+    <div class="cat-sub">本轮周期中值得记录的信号事件（维护于 data/manual.json）</div>
+    <ul class="events" id="events"></ul>
+  </section>
+
+  <section class="cat">
+    <h2>评估方法</h2>
+    <div class="method" id="method"></div>
+  </section>
+
+  <footer>
+    仅为个人研究工具 · 手动指标每季度财报季后更新 data/manual.json，自动指标运行 fetch_data.py 拉取 FRED 公开数据
+  </footer>
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<script src="data/data.js"></script>
+<script>
+"use strict";
+/* ================= 指标配置 =================
+   bands: [值, 评分] 折线插值（值升序），评分 0-100，越高越危险
+   axis:  extent=泡沫程度（干柴） trigger=引爆临近度（火星） none=背景参考 */
+const CATS = [
+  { id: "valuation", name: "估值与结构", sub: "泡沫有多大 —— 这些指标决定跌下来会有多惨，但不负责报时" },
+  { id: "funding",   name: "AI 资金链", sub: "本轮泡沫的燃料供给 —— 资本开支、发债、循环融资与变现落差" },
+  { id: "credit",    name: "信用与流动性", sub: "历史上给泡沫报时的一侧 —— 信用市场几乎总是比股市先闻到味道" },
+  { id: "market",    name: "市场信号", sub: "趋势、波动与监管姿态" },
+];
+
+const INDICATORS = [
+  { id:"shiller_cape", cat:"valuation", axis:"extent", weight:2, unit:"倍", dec:1,
+    name:"席勒 CAPE（周期调整市盈率）",
+    bands:[[20,10],[30,45],[38,75],[44,100]],
+    thr:"30 以上偏贵 · 38 以上历史极值区（2000年顶点 44）" },
+  { id:"buffett", cat:"valuation", axis:"extent", weight:2, unit:"%", dec:0,
+    name:"巴菲特指标（总市值/GDP）",
+    bands:[[100,10],[150,40],[190,70],[230,90],[260,100]],
+    thr:"2000年顶点约 140% · 2021年顶点约 200%" },
+  { id:"concentration_top10", cat:"valuation", axis:"extent", weight:1.5, unit:"%", dec:0,
+    name:"市场集中度（前十大权重）",
+    bands:[[20,10],[27,40],[33,65],[40,90],[45,100]],
+    thr:"长期均值约 20-25% · 2000年顶点约 27%" },
+
+  { id:"capex_growth", cat:"funding", axis:"extent", weight:1.5, unit:"%", dec:0,
+    name:"超大规模厂商资本开支增速",
+    bands:[[0,10],[20,35],[40,60],[60,80],[80,95]],
+    thr:"注意：该指标的「下调」才是引爆信号，增速越高干柴越多" },
+  { id:"capex_intensity", cat:"funding", axis:"extent", weight:1.5, unit:"%", dec:0,
+    name:"资本开支占收入比",
+    bands:[[15,10],[25,40],[35,65],[45,85],[55,100]],
+    thr:"历史正常区间 15-25% · 超过 40% 为前所未见" },
+  { id:"debt_issuance", cat:"funding", axis:"extent", weight:1, unit:"亿美元", dec:0,
+    name:"超大规模厂商年发债规模",
+    bands:[[500,10],[1500,40],[2500,65],[4000,90],[5000,100]],
+    thr:"从现金流投资转向发债投资是脆弱化标志（明斯基式演进）" },
+  { id:"fcf_negative_count", cat:"funding", axis:"trigger", weight:1, unit:"家", dec:0,
+    name:"自由现金流转负的厂商数",
+    bands:[[0,10],[1,45],[2,70],[3,90],[5,100]],
+    thr:"0 家安全 · 2 家以上 = 资金链压力实质化" },
+  { id:"circular_financing", cat:"funding", axis:"extent", weight:1.5, unit:"级", dec:0,
+    name:"循环融资程度（0-4 级）",
+    bands:[[0,5],[1,30],[2,55],[3,80],[4,100]],
+    thr:"3 级 = 体系化且被监管点名 · 4 级 = 开始暴雷" },
+  { id:"ai_adoption_depth", cat:"funding", axis:"extent", weight:1, unit:"%", dec:0,
+    name:"企业 AI 规模化落地率",
+    bands:[[25,100],[38,80],[45,60],[55,35],[70,10]],
+    thr:"越低说明资本开支与变现的剪刀差越大（反向指标）" },
+  { id:"ipo_heat", cat:"funding", axis:"extent", weight:1.5, unit:"级", dec:0,
+    name:"一级市场狂热度（0-4 级）",
+    bands:[[0,5],[1,30],[2,55],[3,80],[4,100]],
+    thr:"1999年剧本：龙头上市成功 → 明星跟进 → 估值膨胀；破发潮出现则转为引爆信号" },
+  { id:"liquidity_drain", cat:"funding", axis:"trigger", weight:1.5, unit:"级", dec:0,
+    name:"新股供给抽水（0-4 级）",
+    bands:[[0,5],[1,25],[2,50],[3,80],[4,100]],
+    thr:"「融资繁荣而股价不再上涨」（3 级）是本轮周期最重要的顶部信号" },
+
+  { id:"hy_oas", cat:"credit", axis:"trigger", weight:2.5, unit:"%", dec:2,
+    name:"高收益债利差（HY OAS）",
+    bands:[[2.5,10],[3.5,40],[4.5,70],[6,95],[8,100]],
+    thr:"预警线 4% · 危险线 5.5%（突破且不回落 = 资金链收紧确认）" },
+  { id:"ccc_oas", cat:"credit", axis:"trigger", weight:1.5, unit:"%", dec:2,
+    name:"CCC 级及以下利差",
+    bands:[[6,10],[8,40],[10,70],[14,95]],
+    thr:"垃圾债中的垃圾债，对资金链断裂最敏感" },
+  { id:"hy_trend", cat:"credit", axis:"trigger", weight:2, unit:"bp", dec:0, derived:"hy_oas",
+    name:"利差三个月变化（背离侦测）",
+    bands:[[-20,5],[0,20],[30,45],[60,70],[120,95]],
+    thr:"「股指新高 + 利差持续走阔」的背离是最可靠的顶部先行信号" },
+  { id:"nfci", cat:"credit", axis:"trigger", weight:1.5, unit:"", dec:2,
+    name:"芝加哥联储金融条件指数",
+    bands:[[-0.6,5],[-0.3,25],[0,55],[0.5,85],[1,100]],
+    thr:"负值 = 宽松 · 转正 = 金融条件收紧" },
+  { id:"yield_curve", cat:"credit", axis:"trigger", weight:0.5, unit:"%", dec:2,
+    name:"收益率曲线（10Y-2Y）",
+    bands:[[-1.5,75],[-0.5,60],[0,45],[0.5,30],[1.5,50],[2.5,65]],
+    thr:"深度倒挂与倒挂后的快速陡峭化都值得警惕" },
+  { id:"fedfunds", cat:"credit", axis:"none", weight:0, unit:"%", dec:2,
+    name:"联邦基金利率（背景参考）",
+    bands:[[0,0],[10,0]],
+    thr:"方向比水平重要：重新收紧会抽走泡沫的水" },
+
+  { id:"vix", cat:"market", axis:"trigger", weight:1, unit:"", dec:1,
+    name:"VIX 恐慌指数",
+    bands:[[10,30],[14,18],[20,35],[30,70],[45,100]],
+    thr:"极低 = 自满 · 30 以上 = 压力释放中" },
+  { id:"sp500_ext200", cat:"market", axis:"trigger", weight:1.5, unit:"%", dec:1,
+    name:"标普500 对 200 日线乖离",
+    bands:[[-10,95],[-5,80],[0,60],[3,30],[8,25],[13,40],[18,55]],
+    thr:"跌破 200 日线 = 趋势破位（经典顶部确认信号）" },
+  { id:"breadth_nethighs", cat:"market", axis:"trigger", weight:1.5, unit:"只", dec:0,
+    name:"纽交所净新高（新高-新低）",
+    bands:[[-600,95],[-300,78],[-100,60],[0,45],[200,20],[500,8]],
+    thr:"指数创新高而净新高持续为负 = 宽度背离，历史上领先顶部数月" },
+  { id:"regulator_warnings", cat:"market", axis:"extent", weight:1, unit:"级", dec:0,
+    name:"监管/央行警告强度（0-4 级）",
+    bands:[[0,5],[1,30],[2,55],[3,75],[4,95]],
+    thr:"央行的央行公开点名，历史上是泡沫后期的典型标志" },
+];
+
+const STAGES = [
+  { n:"萌芽期", en:"Displacement", d:"新技术叙事出现，聪明钱进场" },
+  { n:"繁荣期", en:"Boom", d:"信贷扩张，价格上涨自我强化" },
+  { n:"亢奋期", en:"Euphoria", d:"估值脱离现实，杠杆与循环融资盛行" },
+  { n:"警讯期", en:"Distress", d:"内部人离场，信用利差走阔，资金链吃紧" },
+  { n:"恐慌期", en:"Panic", d:"融资窗口关闭，踩踏出场" },
+];
+
+const SEV = [
+  { max:30,  cls:"good",     ic:"●", label:"平稳" },
+  { max:55,  cls:"warning",  ic:"▲", label:"关注" },
+  { max:75,  cls:"serious",  ic:"◆", label:"警戒" },
+  { max:101, cls:"critical", ic:"■", label:"危险" },
+];
+const SEV_COLOR = { good:"#0ca30c", warning:"#fab219", serious:"#ec835a", critical:"#d03b3b" };
+
+/* ================= 工具 ================= */
+const $ = (s)=>document.querySelector(s);
+const el = (tag, cls, text)=>{ const e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e; };
+
+function interp(bands, v){
+  if(v<=bands[0][0]) return bands[0][1];
+  for(let i=1;i<bands.length;i++){
+    if(v<=bands[i][0]){
+      const [x0,s0]=bands[i-1],[x1,s1]=bands[i];
+      return s0+(v-x0)/(x1-x0)*(s1-s0);
+    }
+  }
+  return bands[bands.length-1][1];
+}
+const sevOf = (score)=>SEV.find(s=>score<s.max);
+const fmtNum = (v,dec)=>Number(v).toLocaleString("zh-CN",{minimumFractionDigits:dec,maximumFractionDigits:dec});
+
+/* ================= 数据装配 ================= */
+const DATA = window.BUBBLE_DATA || null;
+
+function resolve(ind){
+  // 返回 {value, asOf, series, source, note, estimate, kind}，无数据返回 null value
+  const auto = DATA && DATA.values && DATA.values[ind.id];
+  const man  = DATA && DATA.manual && DATA.manual[ind.id];
+  if(ind.derived){
+    const base = DATA && DATA.values && DATA.values[ind.derived];
+    if(base && base.series && base.series.length > 10){
+      const s = base.series, last = s[s.length-1];
+      const target = new Date(last[0]); target.setDate(target.getDate()-90);
+      const ts = target.toISOString().slice(0,10);
+      let ref = s[0];
+      for(const p of s){ if(p[0] <= ts) ref = p; else break; }
+      const delta = Math.round((last[1]-ref[1])*100); // 百分点→bp
+      return { value: delta, asOf: last[0], series: null, kind:"派生",
+               note: `由 HY OAS 序列计算：${last[0]} 的 ${last[1]}% 相对约三个月前（${ref[0]} 的 ${ref[1]}%）的变化。`,
+               source:"FRED（派生）", sourceUrl:null };
+    }
+    return { value:null, kind:"派生" };
+  }
+  if(auto){
+    return { value: auto.value, asOf: auto.asOf, series: auto.series || null,
+             extra: auto.extra, kind: auto.fetched ? "自动" : "自动",
+             note: man ? man.note : "", source: man ? man.source : "FRED",
+             sourceUrl: man ? man.sourceUrl : `https://fred.stlouisfed.org/`, estimate: man && man.estimate };
+  }
+  if(man){
+    return { value: man.value, asOf: man.asOf, series: null, kind:"手动",
+             note: man.note, source: man.source, sourceUrl: man.sourceUrl, estimate: man.estimate };
+  }
+  return { value: null, kind: "自动" };
+}
+
+const RESOLVED = {};
+INDICATORS.forEach(ind=>{
+  const r = resolve(ind);
+  r.score = (r.value==null || ind.axis==="none") ? null : Math.round(interp(ind.bands, r.value));
+  RESOLVED[ind.id] = r;
+});
+
+function composite(axis){
+  let sw=0, ss=0, used=0, total=0, contrib=[];
+  INDICATORS.forEach(ind=>{
+    if(ind.axis!==axis) return;
+    total++;
+    const r = RESOLVED[ind.id];
+    if(r.score==null) return;
+    used++; sw += ind.weight; ss += r.score*ind.weight;
+    contrib.push({ name: ind.name, score: r.score, w: ind.weight });
+  });
+  contrib.sort((a,b)=>b.score*b.w - a.score*a.w);
+  return { score: sw? Math.round(ss/sw) : null, used, total, contrib };
+}
+
+function stageOf(extent, trigger){
+  if(extent==null || trigger==null) return { idx:null };
+  let idx;
+  if(extent < 35) idx = 0;
+  else if(extent < 60) idx = 1;
+  else if(trigger < 45) idx = 2;
+  else if(trigger < 65) idx = 3;
+  else idx = 4;
+  // 阶段内位置（前段/中段/后段）
+  let pos = "";
+  if(idx===2){
+    const p = trigger/45;
+    pos = p<0.4 ? "前段" : p<0.75 ? "中段" : "后段（逼近警讯期）";
+  }
+  return { idx, pos };
+}
+
+/* ================= 渲染：综合评估 ================= */
+function renderHero(){
+  const ext = composite("extent"), trg = composite("trigger");
+  const st = stageOf(ext.score, trg.score);
+  $("#hero").style.display = "";
+  if(st.idx==null){
+    $("#stageName").textContent = "数据不足";
+    return;
+  }
+  const stage = STAGES[st.idx];
+  $("#stageName").textContent = `第${"一二三四五"[st.idx]}阶段 · ${stage.n}`;
+  $("#stageSub").textContent = `${stage.en} — ${stage.d}${st.pos ? " · 当前位于" + st.pos : ""}`;
+
+  const stepper = $("#stepper");
+  STAGES.forEach((s,i)=>{
+    const d = el("div", "step" + (i<st.idx?" past": i===st.idx?" now":""));
+    d.appendChild(el("div","bar"));
+    d.appendChild(el("div","t", `${i+1} ${s.n}`));
+    stepper.appendChild(d);
+  });
+
+  renderMeter($("#meterExtent"), "泡沫程度（干柴有多少）", ext,
+    "估值、集中度、资本开支结构、循环融资 —— 决定破裂时的杀伤力");
+  renderMeter($("#meterTrigger"), "引爆临近度（火星有多近）", trg,
+    "信用利差、金融条件、趋势破位 —— 决定顶点何时出现");
+
+  const v = $("#verdict");
+  const p1 = el("p");
+  p1.append("综合判定：");
+  const b = el("strong", null, `${stage.n}${st.pos?`（${st.pos}）`:""}`);
+  p1.appendChild(b);
+  p1.append(` —— 泡沫程度 ${ext.score}/100，引爆临近度 ${trg.score}/100。干柴已经堆得很高，${trg.score<45 ? "但引爆信号尚未出现，信用市场仍愿意供血" : trg.score<65 ? "且火星开始出现，进入需要每日盯盘的区间" : "且引爆信号密集出现"}。`);
+  const top3e = ext.contrib.slice(0,3).map(c=>`${c.name}（${c.score}分）`).join("、");
+  const p2 = el("p", null, `推高泡沫程度的主因：${top3e}。`);
+  const topT = trg.contrib.filter(c=>c.score>=45).slice(0,3);
+  const p3 = el("p", null, topT.length
+    ? `引爆侧已亮灯的信号：${topT.map(c=>`${c.name}（${c.score}分）`).join("、")}。`
+    : `引爆侧暂无高分信号 —— 重点盯住：高收益债利差是否站上 4%、任何一家云厂商是否下调资本开支指引、AI 相关发债利率是否跳升。三者任一出现即复查本页。`);
+  const lowCover = ext.used/ext.total < 0.5 || trg.used/trg.total < 0.5;
+  const p4 = el("p", null, `覆盖度：泡沫程度基于 ${ext.used}/${ext.total} 个有数据的指标，引爆临近度基于 ${trg.used}/${trg.total} 个。`
+    + (lowCover ? " ⚠ 数据覆盖不足一半，当前阶段判定可能失真，请先运行 python3 fetch_data.py 补齐自动指标。" : ""));
+  v.append(p1,p2,p3,p4);
+}
+
+function renderMeter(root, name, comp, note){
+  const head = el("div","head");
+  head.appendChild(el("span","name", name));
+  const val = el("span","val");
+  val.append(String(comp.score ?? "—"));
+  const sm = el("small"); sm.textContent = " / 100"; val.appendChild(sm);
+  head.appendChild(val);
+  const sev = sevOf(comp.score ?? 0);
+  const track = el("div","track");
+  track.style.background = SEV_COLOR[sev.cls] + "2e"; // 同色系浅阶轨道
+  const fill = el("div","fill");
+  fill.style.width = (comp.score ?? 0) + "%";
+  fill.style.background = SEV_COLOR[sev.cls];
+  track.appendChild(fill);
+  const noteEl = el("div","note");
+  const chip = el("span","chip");
+  const ic = el("span","ic "+sev.cls, sev.ic);
+  chip.append(ic, ` ${sev.label} · `);
+  noteEl.appendChild(chip);
+  noteEl.append(note);
+  root.append(head, track, noteEl);
+}
+
+/* ================= 图表工具 ================= */
+const tip = $("#tip");
+function showTip(x, y, date, rows){
+  tip.textContent = "";
+  tip.appendChild(el("div","d", date));
+  rows.forEach(r=>{
+    const row = el("div","row");
+    const k = el("span","key"); if(r.color) k.style.borderTopColor = r.color;
+    row.appendChild(k);
+    row.appendChild(el("span","v", r.value));
+    row.appendChild(el("span","l", r.label));
+    tip.appendChild(row);
+  });
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let px = x + 14, py = y - h - 10;
+  if(px + w > innerWidth - 8) px = x - w - 14;
+  if(py < 8) py = y + 14;
+  tip.style.left = px + "px"; tip.style.top = py + "px";
+}
+function hideTip(){ tip.style.display = "none"; }
+
+function sliceRange(series, months){
+  if(!months) return series;
+  const last = new Date(series[series.length-1][0]);
+  last.setMonth(last.getMonth()-months);
+  const cut = last.toISOString().slice(0,10);
+  const out = series.filter(p=>p[0]>=cut);
+  return out.length>1 ? out : series;
+}
+function niceTicks(min, max, n){
+  const span = max-min || 1;
+  const step0 = span/n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(m=>m*mag).find(s=>span/s<=n) || 10*mag;
+  const t0 = Math.ceil(min/step)*step, ticks=[];
+  for(let t=t0; t<=max+1e-9; t+=step) ticks.push(Math.round(t*1000)/1000);
+  return ticks;
+}
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+/* 通用折线图（大图）：网格、坐标、面积水洗、阈值线、十字线+提示框、键盘 */
+function lineChart(container, series, opts){
+  container.textContent = "";
+  if(!series || series.length<2){
+    container.appendChild(el("div","nodata","暂无序列数据 —— 运行 python3 fetch_data.py 拉取"));
+    return;
+  }
+  const W = Math.min(container.clientWidth || 1100, 1200);
+  const H = opts.height || 300;
+  const pad = { l: 44, r: 14, t: 12, b: 26 };
+  const xs = series.map(p=>new Date(p[0]).getTime());
+  const ys = series.map(p=>p[1]);
+  let ymin = Math.min(...ys), ymax = Math.max(...ys);
+  (opts.thresholds||[]).forEach(t=>{ ymax = Math.max(ymax, t.v); });
+  const yr = (ymax-ymin)||1; ymin -= yr*0.08; ymax += yr*0.08;
+  const x0 = xs[0], x1 = xs[xs.length-1];
+  const X = t=> pad.l + (t-x0)/(x1-x0||1)*(W-pad.l-pad.r);
+  const Y = v=> pad.t + (1-(v-ymin)/(ymax-ymin))*(H-pad.t-pad.b);
+
+  const svg = svgEl("svg",{ width:"100%", viewBox:`0 0 ${W} ${H}`, tabindex:"0",
+    role:"img", "aria-label": opts.label || "折线图" });
+
+  // 横向网格 + Y刻度
+  niceTicks(ymin, ymax, 5).forEach(t=>{
+    svg.appendChild(svgEl("line",{x1:pad.l, x2:W-pad.r, y1:Y(t), y2:Y(t),
+      stroke:"#2c2c2a","stroke-width":1}));
+    const lbl = svgEl("text",{x:pad.l-8, y:Y(t)+4, "text-anchor":"end",
+      fill:"#898781","font-size":"11","font-family":"inherit"});
+    lbl.style.fontVariantNumeric = "tabular-nums";
+    lbl.textContent = t;
+    svg.appendChild(lbl);
+  });
+  // X刻度：约5个
+  const n = series.length;
+  for(let i=0;i<5;i++){
+    const idx = Math.round(i*(n-1)/4);
+    const d = series[idx][0].slice(0,7);
+    const t = svgEl("text",{x:X(xs[idx]), y:H-8, "text-anchor": i===0?"start":i===4?"end":"middle",
+      fill:"#898781","font-size":"11","font-family":"inherit"});
+    t.style.fontVariantNumeric = "tabular-nums";
+    t.textContent = d;
+    svg.appendChild(t);
+  }
+  // 阈值参考线（状态语义色，右侧文字标签用墨色）
+  (opts.thresholds||[]).forEach(t=>{
+    svg.appendChild(svgEl("line",{x1:pad.l,x2:W-pad.r,y1:Y(t.v),y2:Y(t.v),
+      stroke:t.color,"stroke-width":1,opacity:.55}));
+    const lb = svgEl("text",{x:W-pad.r, y:Y(t.v)-4,"text-anchor":"end",
+      fill:"#c3c2b7","font-size":"11"});
+    lb.textContent = t.label;
+    svg.appendChild(lb);
+  });
+  // 面积水洗 + 线
+  const pts = series.map((p,i)=>`${X(xs[i])},${Y(p[1])}`).join(" ");
+  svg.appendChild(svgEl("polygon",{points:`${pad.l},${Y(ymin)} ${pts} ${W-pad.r},${Y(ymin)}`,
+    fill:"#3987e5", opacity:.1}));
+  svg.appendChild(svgEl("polyline",{points:pts, fill:"none", stroke:"#3987e5",
+    "stroke-width":2, "stroke-linejoin":"round","stroke-linecap":"round"}));
+  // 端点：≥8px 带表面环
+  const lx=X(xs[n-1]), ly=Y(ys[n-1]);
+  svg.appendChild(svgEl("circle",{cx:lx,cy:ly,r:6,fill:"#1a1a19"}));
+  svg.appendChild(svgEl("circle",{cx:lx,cy:ly,r:4,fill:"#3987e5"}));
+
+  // 十字线
+  const cross = svgEl("line",{x1:0,x2:0,y1:pad.t,y2:H-pad.b,stroke:"#898781",
+    "stroke-width":1, opacity:0});
+  const dot = svgEl("circle",{r:5,fill:"#3987e5",stroke:"#1a1a19","stroke-width":2,opacity:0});
+  svg.append(cross, dot);
+
+  let focusIdx = null;
+  function showAt(idx, clientX, clientY){
+    const cx = X(xs[idx]);
+    cross.setAttribute("x1",cx); cross.setAttribute("x2",cx);
+    cross.setAttribute("opacity",.6);
+    dot.setAttribute("cx",cx); dot.setAttribute("cy",Y(ys[idx]));
+    dot.setAttribute("opacity",1);
+    const rect = svg.getBoundingClientRect();
+    const px = clientX!=null ? clientX : rect.left + cx*(rect.width/W);
+    const py = clientY!=null ? clientY : rect.top + Y(ys[idx])*(rect.height/H);
+    showTip(px, py, series[idx][0],
+      [{ value: fmtNum(ys[idx], opts.dec ?? 2) + (opts.unit||""), label: opts.short || "", color:"#3987e5" }]);
+  }
+  function hide(){ cross.setAttribute("opacity",0); dot.setAttribute("opacity",0); hideTip(); focusIdx=null; }
+  svg.addEventListener("pointermove",(ev)=>{
+    const rect = svg.getBoundingClientRect();
+    const mx = (ev.clientX-rect.left)*(W/rect.width);
+    const t = x0 + (mx-pad.l)/(W-pad.l-pad.r)*(x1-x0);
+    let best=0, bd=Infinity;
+    for(let i=0;i<n;i++){ const d=Math.abs(xs[i]-t); if(d<bd){bd=d;best=i;} }
+    showAt(best, ev.clientX, ev.clientY);
+  });
+  svg.addEventListener("pointerleave", hide);
+  svg.addEventListener("keydown",(ev)=>{
+    if(ev.key==="Escape"){ hide(); return; }
+    if(ev.key!=="ArrowLeft" && ev.key!=="ArrowRight") return;
+    ev.preventDefault();
+    if(focusIdx==null) focusIdx = n-1;
+    else focusIdx = Math.max(0, Math.min(n-1, focusIdx + (ev.key==="ArrowRight"?1:-1)));
+    showAt(focusIdx);
+  });
+  svg.addEventListener("blur", hide);
+  container.appendChild(svg);
+}
+
+/* 卡片 sparkline：历史段弱化色，端点用主色 */
+function sparkline(container, series, opts){
+  const W=260, H=40;
+  const xs = series.map(p=>new Date(p[0]).getTime());
+  const ys = series.map(p=>p[1]);
+  const ymin=Math.min(...ys), ymax=Math.max(...ys), yr=(ymax-ymin)||1;
+  const X=t=>2+(t-xs[0])/(xs[xs.length-1]-xs[0]||1)*(W-10);
+  const Y=v=>4+(1-(v-ymin)/yr)*(H-8);
+  const svg = svgEl("svg",{width:"100%",viewBox:`0 0 ${W} ${H}`,class:"spark",
+    role:"img","aria-label":(opts.name||"")+" 走势"});
+  const pts = series.map((p,i)=>`${X(xs[i])},${Y(p[1])}`).join(" ");
+  svg.appendChild(svgEl("polyline",{points:pts,fill:"none",stroke:"#5a5954",
+    "stroke-width":2,"stroke-linejoin":"round","stroke-linecap":"round"}));
+  const lx=X(xs[xs.length-1]), ly=Y(ys[ys.length-1]);
+  svg.appendChild(svgEl("circle",{cx:lx,cy:ly,r:5.5,fill:"#1a1a19"}));
+  svg.appendChild(svgEl("circle",{cx:lx,cy:ly,r:3.5,fill:"#3987e5"}));
+  svg.addEventListener("pointermove",(ev)=>{
+    const rect = svg.getBoundingClientRect();
+    const mx = (ev.clientX-rect.left)*(W/rect.width);
+    let best=0,bd=Infinity;
+    for(let i=0;i<xs.length;i++){ const d=Math.abs(X(xs[i])-mx); if(d<bd){bd=d;best=i;} }
+    showTip(ev.clientX, ev.clientY, series[best][0],
+      [{value: fmtNum(ys[best], opts.dec??2)+(opts.unit||""), label:"", color:"#3987e5"}]);
+  });
+  svg.addEventListener("pointerleave", hideTip);
+  container.appendChild(svg);
+}
+
+/* ================= 渲染：指标卡片 ================= */
+let rangeMonths = 12;
+
+function renderCards(){
+  const root = $("#sections");
+  root.textContent = "";
+  CATS.forEach(cat=>{
+    const sec = el("section","cat");
+    sec.appendChild(el("h2",null,cat.name));
+    sec.appendChild(el("div","cat-sub",cat.sub));
+    const grid = el("div","cards");
+    INDICATORS.filter(i=>i.cat===cat.id).forEach(ind=>{
+      grid.appendChild(card(ind));
+    });
+    sec.appendChild(grid);
+    root.appendChild(sec);
+  });
+}
+
+function card(ind){
+  const r = RESOLVED[ind.id];
+  const c = el("div","card");
+  const top = el("div","top");
+  top.appendChild(el("div","name", ind.name));
+  const badges = el("div");
+  badges.appendChild(el("span","badge", r.kind));
+  if(r.estimate){ badges.append(" "); badges.appendChild(el("span","badge","估算值")); }
+  top.appendChild(badges);
+  c.appendChild(top);
+
+  const vr = el("div","value-row");
+  if(r.value==null){
+    vr.appendChild(el("span","nodata","暂无数据 · 运行 fetch_data.py"));
+  } else {
+    vr.appendChild(el("span","value", fmtNum(r.value, ind.dec)));
+    vr.appendChild(el("span","unit", ind.unit));
+    if(r.score!=null){
+      const sev = sevOf(r.score);
+      const chip = el("span","chip");
+      chip.appendChild(el("span","ic "+sev.cls, sev.ic));
+      chip.append(sev.label);
+      vr.appendChild(chip);
+    } else if(ind.axis==="none"){
+      vr.appendChild(el("span","badge","背景参考，不计分"));
+    }
+  }
+  c.appendChild(vr);
+
+  if(r.score!=null){
+    const sb = el("div","scorebar");
+    const sev = sevOf(r.score);
+    const track = el("div","track");
+    track.style.background = SEV_COLOR[sev.cls]+"2e";
+    const fill = el("div","fill");
+    fill.style.width = r.score+"%";
+    fill.style.background = SEV_COLOR[sev.cls];
+    track.appendChild(fill);
+    sb.appendChild(track);
+    sb.appendChild(el("span","n", `${r.score}分 ×${ind.weight}`));
+    c.appendChild(sb);
+  }
+
+  if(r.series && r.series.length>2){
+    const sp = el("div");
+    sparkline(sp, sliceRange(r.series, rangeMonths), {unit:ind.unit&&ind.unit!=="级"?ind.unit:"", dec:ind.dec, name:ind.name});
+    c.appendChild(sp);
+  }
+
+  c.appendChild(el("div","thresholds", ind.thr));
+  if(r.note) c.appendChild(el("div","desc", r.note));
+
+  const meta = el("div","meta");
+  const axisName = ind.axis==="extent"?"计入泡沫程度":ind.axis==="trigger"?"计入引爆临近度":"不计分";
+  meta.append(`${axisName} · 截至 ${r.asOf||"—"}`);
+  if(r.sourceUrl){
+    meta.append(" · ");
+    const a = el("a",null,r.source||"来源");
+    a.href = r.sourceUrl; a.target = "_blank"; a.rel = "noopener";
+    meta.appendChild(a);
+  } else if(r.source){
+    meta.append(" · " + r.source);
+  }
+  c.appendChild(meta);
+  return c;
+}
+
+/* ================= 渲染：大图 ================= */
+function renderBig(){
+  const r = RESOLVED["hy_oas"];
+  const cur = $("#bigCur");
+  if(r.value!=null){
+    cur.textContent = "";
+    cur.append("最新 ");
+    const b = el("b",null,`${fmtNum(r.value,2)}%`);
+    cur.appendChild(b);
+    cur.append(`（${r.asOf}）· FRED: BAMLH0A0HYM2`);
+  }
+  const series = r.series ? sliceRange(r.series, rangeMonths) : null;
+  lineChart($("#bigChart"), series, {
+    height: 300, unit: "%", dec: 2, short: "HY OAS",
+    label: "高收益债利差历史走势",
+    thresholds: [
+      { v: 4,   label: "预警 4%",   color: SEV_COLOR.warning },
+      { v: 5.5, label: "危险 5.5%", color: SEV_COLOR.critical },
+    ],
+  });
+  // 数据表格孪生（月度抽样）
+  const bt = $("#bigTable");
+  bt.textContent = "";
+  if(r.series){
+    const tbl = el("table","data");
+    const thead = el("thead"); const trh = el("tr");
+    ["日期","HY OAS (%)"].forEach(h=>trh.appendChild(el("th",null,h)));
+    thead.appendChild(trh); tbl.appendChild(thead);
+    const tbody = el("tbody");
+    const seen = new Set();
+    [...r.series].reverse().forEach(p=>{
+      const m = p[0].slice(0,7);
+      if(seen.has(m)) return;
+      seen.add(m);
+      const tr = el("tr");
+      tr.appendChild(el("td","nm",p[0]));
+      tr.appendChild(el("td",null,fmtNum(p[1],2)));
+      tbody.appendChild(tr);
+    });
+    tbl.appendChild(tbody);
+    bt.appendChild(tbl);
+  }
+}
+
+/* ================= 渲染：过滤行 / 表格视图 / 事件 / 方法 ================= */
+const RANGES = [ {m:6,t:"近6月"}, {m:12,t:"近1年"}, {m:36,t:"近3年"}, {m:0,t:"全部"} ];
+function renderFilters(){
+  const seg = $("#rangeSeg");
+  RANGES.forEach(rg=>{
+    const b = el("button",null,rg.t);
+    b.setAttribute("aria-pressed", String(rg.m===rangeMonths));
+    if(rg.m===rangeMonths) b.classList.add("on");
+    b.addEventListener("click",()=>{
+      rangeMonths = rg.m;
+      seg.querySelectorAll("button").forEach(x=>{x.classList.remove("on");x.setAttribute("aria-pressed","false");});
+      b.classList.add("on"); b.setAttribute("aria-pressed","true");
+      renderBig(); renderCards();
+    });
+    seg.appendChild(b);
+  });
+  $("#tableToggle").addEventListener("click",()=>{
+    const w = $("#tablewrap");
+    const show = !w.classList.contains("show");
+    w.classList.toggle("show", show);
+    $("#tableToggle").setAttribute("aria-expanded", String(show));
+    $("#tableToggle").textContent = show ? "收起表格" : "表格视图";
+  });
+}
+
+function renderTable(){
+  const w = $("#tablewrap");
+  const tbl = el("table","data");
+  const thead = el("thead"); const trh = el("tr");
+  ["指标","最新值","截至","评分","状态","计入轴","权重","类型"].forEach(h=>trh.appendChild(el("th",null,h)));
+  thead.appendChild(trh); tbl.appendChild(thead);
+  const tbody = el("tbody");
+  INDICATORS.forEach(ind=>{
+    const r = RESOLVED[ind.id];
+    const tr = el("tr");
+    tr.appendChild(el("td","nm",ind.name));
+    tr.appendChild(el("td",null, r.value==null?"—":fmtNum(r.value,ind.dec)+(ind.unit?" "+ind.unit:"")));
+    tr.appendChild(el("td",null, r.asOf||"—"));
+    tr.appendChild(el("td",null, r.score==null?"—":String(r.score)));
+    const sevTd = el("td");
+    if(r.score!=null){
+      const sev = sevOf(r.score);
+      const chip = el("span","chip");
+      chip.appendChild(el("span","ic "+sev.cls, sev.ic));
+      chip.append(sev.label);
+      sevTd.appendChild(chip);
+    } else sevTd.textContent = "—";
+    tr.appendChild(sevTd);
+    tr.appendChild(el("td",null, ind.axis==="extent"?"泡沫程度":ind.axis==="trigger"?"引爆临近度":"不计分"));
+    tr.appendChild(el("td",null, ind.weight?("×"+ind.weight):"—"));
+    tr.appendChild(el("td",null, r.kind + (r.estimate?"（估算）":"")));
+    tbody.appendChild(tr);
+  });
+  tbl.appendChild(tbody);
+  w.appendChild(tbl);
+}
+
+function renderEvents(){
+  const ul = $("#events");
+  ((DATA&&DATA.events)||[]).slice().reverse().forEach(ev=>{
+    const li = el("li");
+    li.appendChild(el("span","d",ev.date));
+    li.append(ev.text);
+    ul.appendChild(li);
+  });
+}
+
+function renderMethod(){
+  const m = $("#method");
+  [
+    "双轴模型：把「泡沫存在」和「泡沫何时破」拆开衡量。泡沫程度（干柴）由估值、集中度、资本开支结构、循环融资、一级市场狂热度等 10 个指标加权合成；引爆临近度（火星）由信用利差及其变化趋势、金融条件、市场宽度、新股供给抽水、趋势破位等 10 个指标加权合成。每个指标按预设的分段阈值线性插值为 0-100 分，越高越危险，阈值和权重都写在 index.html 的 INDICATORS 配置里，可自行调整。",
+    "阶段映射：泡沫程度 <35 为萌芽期，35-60 为繁荣期；≥60 之后看引爆临近度 —— <45 为亢奋期，45-65 为警讯期，≥65 为恐慌期。这是金德尔伯格《疯狂、惊恐和崩溃》与明斯基金融不稳定假说的五阶段框架。",
+    "为什么这样设计：估值类指标（CAPE、巴菲特指标）历史上从不能给顶部报时 —— 它们只度量跌下来的空间。而历次泡沫的顶点都出现在供血资金流反转之时，所以引爆侧的权重集中在信用市场（高收益债利差 ×2.5、利差三个月变化 ×2）。「股指新高 + 利差持续走阔」的背离是需要最优先响应的组合信号。",
+  ].forEach(t=>m.appendChild(el("p",null,t)));
+  const disc = el("p","disc","免责声明：本页为个人研究工具，数据可能滞后或有误（手动指标依赖人工更新），评分模型为主观设定，不构成任何投资建议。");
+  m.appendChild(disc);
+}
+
+/* ================= 启动 ================= */
+if(!DATA){
+  const b = $("#banner");
+  b.style.display = "";
+  b.textContent = "未找到 data/data.js —— 请先在项目目录运行 python3 fetch_data.py 生成数据文件。";
+} else {
+  $("#gen").textContent = DATA.generated || "—";
+  const missing = INDICATORS.filter(i=>RESOLVED[i.id].value==null).length;
+  if(missing>0){
+    const b = $("#banner");
+    b.style.display = "";
+    b.textContent = `有 ${missing} 个指标暂无数据（多为 FRED 自动序列）。请运行 python3 fetch_data.py 补齐 —— 若提示超时，等一两分钟再试（FRED 对连续请求限流）。`;
+  }
+  renderHero();
+  renderFilters();
+  renderTable();
+  renderBig();
+  renderCards();
+  renderEvents();
+  renderMethod();
+}
+
+/* ================= 开机动画（手写 ka1o，移植自 proposal） ================= */
+(function preloaderBoot(){
+  const pre = document.getElementById("preloader");
+  const counter = document.getElementById("preloaderCounter");
+  const line = document.getElementById("preloaderLine");
+  const paths = pre.querySelectorAll(".logo-path");
+
+  let seen = false;
+  try { seen = sessionStorage.getItem("bubble-preloaded") === "1"; } catch(e){}
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // 首次访问完整描画，同会话再进快速跳过
+  const MIN_DISPLAY = (seen || reduced) ? 300 : 2000;
+
+  const drawTimings   = [0, 0.12, 0.24, 0.5, 0.8, 1.0];   // 每笔起笔延迟（秒）
+  const drawDurations = [0.5, 0.35, 0.35, 0.7, 0.4, 0.7]; // 每笔时长
+  paths.forEach((p, i)=>{
+    const len = p.getTotalLength();
+    p.style.setProperty("--path-len", len);
+    p.style.setProperty("--draw-delay", drawTimings[i] + "s");
+    p.style.setProperty("--draw-dur", drawDurations[i] + "s");
+  });
+
+  setTimeout(()=>{
+    paths.forEach(p=>p.classList.add("draw"));
+    setTimeout(()=>counter.classList.add("visible"), 600);
+  }, 200);
+
+  const start = performance.now();
+  function tick(){
+    const t = Math.min(1, (performance.now() - start) / MIN_DISPLAY);
+    const eased = 1 - Math.pow(1 - t, 3);
+    counter.textContent = String(Math.floor(eased * 100)).padStart(3, "0");
+    line.style.width = (eased * 100) + "%";
+    if(t < 1) requestAnimationFrame(tick);
+    else setTimeout(exit, 200);
+  }
+  requestAnimationFrame(tick);
+
+  function exit(){
+    try { sessionStorage.setItem("bubble-preloaded", "1"); } catch(e){}
+    pre.classList.add("exit");
+    document.body.classList.remove("is-loading");
+    pre.addEventListener("transitionend", ()=>pre.remove(), { once:true });
+    setTimeout(()=>pre.remove(), 1500); // 兜底，防 transitionend 不触发
+  }
+})();
+</script>
+</body>
+</html>

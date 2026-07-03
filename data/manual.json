@@ -1,0 +1,107 @@
+{
+  "_说明": "手动维护的季度/事件型指标。每季度财报季后更新一次即可。改完运行 python3 fetch_data.py 重新生成 data/data.js。",
+  "indicators": {
+    "shiller_cape": {
+      "value": 42.3,
+      "asOf": "2026-06",
+      "note": "史上第二高，仅次于2000年互联网泡沫（44.2）。fetch脚本会尝试从multpl.com自动抓取覆盖此值。",
+      "source": "multpl.com / Motley Fool",
+      "sourceUrl": "https://www.multpl.com/shiller-pe"
+    },
+    "buffett": {
+      "value": 237,
+      "asOf": "2026-06",
+      "note": "美股总市值/GDP。2000年顶点约140%，2021年顶点约200%。",
+      "source": "TradingKey",
+      "sourceUrl": "https://www.tradingkey.com/analysis/stocks/us-stocks/261950917-sp500-valuation-bubble-ai-concentration-shiller-pe-buffett-indicator-fed-hawkish-yield-market-nifty-fifty-strategy-tradingkey"
+    },
+    "concentration_top10": {
+      "value": 40,
+      "asOf": "2026-06",
+      "estimate": true,
+      "note": "前十大成分股占标普500权重，约40%（估算值，请以最新数据校准）。2000年顶点约27%。",
+      "source": "S&P Global（需人工核对）",
+      "sourceUrl": "https://www.spglobal.com/spdji/"
+    },
+    "capex_growth": {
+      "value": 70,
+      "asOf": "2026-Q2",
+      "note": "微软/亚马逊/谷歌/Meta/甲骨文2026年资本开支指引合计6350-6900亿美元，同比+67~74%，取中值70%。",
+      "source": "CreditSights",
+      "sourceUrl": "https://know.creditsights.com/insights/technology-hyperscaler-capex-2026-estimates/"
+    },
+    "capex_intensity": {
+      "value": 51,
+      "asOf": "2026-Q2",
+      "note": "资本开支占收入比45-57%，取中值51%。历史正常水平15-25%。",
+      "source": "CreditSights / Introl",
+      "sourceUrl": "https://introl.com/blog/hyperscaler-capex-600b-2026-ai-infrastructure-debt-january-2026"
+    },
+    "debt_issuance": {
+      "value": 4000,
+      "asOf": "2026-Q2",
+      "note": "摩根士丹利预计2026年超大规模厂商发债超4000亿美元，融资模式已从经营现金流转向发债。",
+      "source": "Introl / Morgan Stanley",
+      "sourceUrl": "https://introl.com/blog/hyperscaler-capex-600b-2026-ai-infrastructure-debt-january-2026"
+    },
+    "fcf_negative_count": {
+      "value": 1,
+      "asOf": "2026-Q2",
+      "note": "自由现金流转负的超大规模厂商数量（0-5）。目前：亚马逊2026年FCF预计转负。",
+      "source": "CreditSights",
+      "sourceUrl": "https://know.creditsights.com/insights/technology-hyperscaler-capex-2026-estimates/"
+    },
+    "circular_financing": {
+      "value": 3,
+      "asOf": "2026-06",
+      "note": "循环融资程度（0=无，1=零星，2=多起，3=体系化且被监管点名，4=开始暴雷）。BIS 2026年报已将其列为头号金融稳定威胁。",
+      "source": "BIS Annual Report 2026",
+      "sourceUrl": "https://www.tftc.io/bis-annual-report-2026-ai-bubble-circular-financing-sovereign-debt"
+    },
+    "ai_adoption_depth": {
+      "value": 38,
+      "asOf": "2026-05",
+      "note": "企业AI规模化落地率（%，超出试点阶段的公司占比）。采用广（80-90%用过）但浅（<40%规模化）。",
+      "source": "Guinness Global Investors / BIS",
+      "sourceUrl": "https://www.guinnessgi.com/insights/are-we-in-an-ai-bubble"
+    },
+    "ipo_heat": {
+      "value": 3,
+      "asOf": "2026-06",
+      "note": "一级市场狂热度（0=冷清，1=正常，2=活跃，3=巨型IPO成功+明星公司排队上市，4=垃圾公司也能首日暴涨）。现状：SpaceX完成史上最大IPO（募资750亿、超额认购4倍+），Anthropic/OpenAI已递交S-1。尚未到4级——上市的仍是有真实业务的公司。",
+      "source": "Yahoo Finance / Reuters",
+      "sourceUrl": "https://finance.yahoo.com/markets/article/spacex-openai-and-anthropic-here-are-the-most-anticipated-ipos-in-2026-114439441.html"
+    },
+    "liquidity_drain": {
+      "value": 1,
+      "asOf": "2026-06",
+      "note": "新股供给抽水（0=无大额融资，1=大额供给但市场消化良好，2=融资密集+指数动能减弱，3=融资繁荣而指数滞涨=经典顶部信号，4=破发潮/融资冻结）。现状：年内新股供给或超2400亿美元，但指数仍在高位=消化良好。升到3级时最危险。",
+      "source": "cryptobriefing / Reuters",
+      "sourceUrl": "https://cryptobriefing.com/openai-anthropic-ipo-filings-spacex/"
+    },
+    "breadth_nethighs": {
+      "value": -33,
+      "asOf": "2026-06",
+      "note": "纽交所净新高（52周新高数-新低数，周度）。现状：新高129 - 新低162 = -33。指数在高位而净新高持续为负是经典宽度背离；单周为负不算信号，连续数周恶化才算。",
+      "source": "Reuters（每周人工更新）",
+      "sourceUrl": "https://www.reuters.com/markets/us/"
+    },
+    "regulator_warnings": {
+      "value": 3,
+      "asOf": "2026-06",
+      "note": "监管/央行级警告强度（0=无，1=个别官员提及，2=多机构提示，3=BIS/IMF年报点名头号风险，4=出台限制措施）。",
+      "source": "Fortune / BIS",
+      "sourceUrl": "https://fortune.com/2026/06/29/bis-central-bank-warning-hyperscaler-data-center-1-trillion-gamble-recession/"
+    }
+  },
+  "events": [
+    { "date": "2026-01", "text": "2026年五大厂商资本开支指引合计6350-6900亿美元，同比+67~74%" },
+    { "date": "2026-03", "text": "高收益债利差单季走阔逾50bp（2.65%→3.17%），随后回落" },
+    { "date": "2026-03", "text": "标普500春季回调至6344低点，4-5月强力反弹" },
+    { "date": "2026-05", "text": "企业AI深度采用率仅19.8%（未来半年预期22.8%），与资本开支增速形成剪刀差" },
+    { "date": "2026-06", "text": "SpaceX完成史上最大IPO：发行价135美元募资750亿美元，超额认购4倍以上（6月12日）" },
+    { "date": "2026-06", "text": "Anthropic（6月1日）与OpenAI（6月8日）先后秘密递交S-1，年内新股供给预计超2400亿美元" },
+    { "date": "2026-06", "text": "BIS年报将「AI资本开支泡沫+循环融资崩塌」列为全球金融稳定头号威胁" },
+    { "date": "2026-06", "text": "亚马逊自由现金流预计转负；摩根士丹利预计年内超大规模厂商发债超4000亿美元" }
+  ]
+}
