@@ -46,6 +46,7 @@ open index.html           # 直接用浏览器打开（无需起服务器）
 
 ## 线上版本
 
+- **访问地址：https://ai-bubble-dashboard-dpytzro6ok9e.edgeone.dev**
 - 仓库：https://github.com/576657922/ai-bubble-dashboard（私有）
 - 数据自动更新：GitHub Actions 每天北京时间 6:30 跑一次 `fetch_data.py`
   并提交 `data/data.js`（见 `.github/workflows/refresh-data.yml`），
