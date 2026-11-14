@@ -1,0 +1,68 @@
+name: README 截图
+
+# 手动运行：用无头 Chrome 打开 index.html，生成 README 用的截图并提交到 docs/screenshots/。
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装中文字体
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 截图（桌面 1440×900、手机 390×844，均为 2 倍像素）
+        run: |
+          mkdir -p /tmp/shots
+          cd /tmp/shots
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund playwright@1.65.1 > /dev/null
+          cat > shots.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import { mkdirSync } from 'node:fs';
+          const root = process.env.GITHUB_WORKSPACE;
+          const out = `${root}/docs/screenshots`;
+          mkdirSync(out, { recursive: true });
+          const browser = await chromium.launch({ channel: 'chrome' });
+          for (const s of [
+            { file: 'desktop.png', width: 1440, height: 900 },
+            { file: 'mobile.png', width: 390, height: 844, mobile: true },
+          ]) {
+            const page = await browser.newPage({
+              viewport: { width: s.width, height: s.height },
+              deviceScaleFactor: 2,
+              isMobile: Boolean(s.mobile),
+              hasTouch: Boolean(s.mobile),
+              reducedMotion: 'reduce',
+              locale: 'zh-CN',
+            });
+            await page.goto(`file://${root}/index.html`, { waitUntil: 'networkidle' });
+            await page.evaluate(() => document.fonts.ready);
+            await page.waitForTimeout(3000);
+            await page.screenshot({ path: `${out}/${s.file}` });
+            await page.close();
+          }
+          await browser.close();
+          EOF
+          node shots.mjs
+
+      - name: 提交截图（无变化则跳过）
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          git diff --cached --quiet || {
+            git commit -m "docs: 更新 README 截图"
+            git push
+          }
